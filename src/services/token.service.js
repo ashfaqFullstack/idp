@@ -70,21 +70,43 @@ const generateAuthTokens = async (user) => {
 };
 
 /**
- * Generate reset-password token
+ * Generate reset-password OTP and save it in the DB
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generateResetPasswordToken = async (email) => {
+const generateResetPasswordOtp = async (email) => {
     const user = await userService.getUserByEmail(email);
     if (!user) {
         const ApiError = require('../utils/ApiError');
         const httpStatus = require('http-status').default;
         throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
     }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = moment().add(config.jwt.resetPasswordExpirationMinutes, 'minutes');
-    const resetPasswordToken = generateToken(user.id, expires, tokenTypes.RESET_PASSWORD);
-    await saveToken(resetPasswordToken, user.id, expires, tokenTypes.RESET_PASSWORD);
-    return resetPasswordToken;
+    await saveToken(otp, user.id, expires, tokenTypes.RESET_PASSWORD);
+    return otp;
+};
+
+/**
+ * Verify a reset-password OTP and return the token document
+ * @param {string} otp
+ * @returns {Promise<Token>}
+ */
+const verifyResetPasswordOtp = async (otp) => {
+    const tokenDoc = await prisma.token.findFirst({
+        where: {
+            token: otp,
+            type: tokenTypes.RESET_PASSWORD,
+            blacklisted: false,
+        },
+    });
+    if (!tokenDoc) {
+        throw new Error('Token not found');
+    }
+    if (moment().isAfter(moment(tokenDoc.expires))) {
+        throw new Error('Token expired');
+    }
+    return tokenDoc;
 };
 
 /**
@@ -113,6 +135,7 @@ module.exports = {
     generateToken,
     saveToken,
     generateAuthTokens,
-    generateResetPasswordToken,
+    generateResetPasswordOtp,
+    verifyResetPasswordOtp,
     verifyToken,
 };

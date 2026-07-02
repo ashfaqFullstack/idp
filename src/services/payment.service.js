@@ -10,7 +10,7 @@ const applicationService = require('./application.service');
  * @param {Application} application
  */
 const assertReadyForPayment = (application) => {
-    if (application.status !== 'DRAFT') {
+    if (!['DRAFT', 'PENDING_PAYMENT'].includes(application.status)) {
         throw new ApiError(httpStatus.BAD_REQUEST, `Application is not awaiting payment (status: ${application.status})`);
     }
     if (application.currentStep < 4) {
@@ -155,6 +155,6 @@ const handleCheckoutSessionExpired = async (session) => {
 module.exports = {
     createCheckoutSession,
     assertReadyForPayment,
-    handleCheckoutSessionCompleted, // ← add
-    handleCheckoutSessionExpired,   // ← add
+    handleCheckoutSessionCompleted,
+    handleCheckoutSessionExpired,
 };

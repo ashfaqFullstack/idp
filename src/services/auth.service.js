@@ -19,6 +19,27 @@ const loginUserWithEmailandPassword = async (email, password) => {
     return user;
 };
 
+const resetPassword = async (email, otp, password) => {
+    const user = await userService.getUserByEmail(email);
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
+    }
+
+    let resetTokenDoc;
+    try {
+        resetTokenDoc = await tokenService.verifyResetPasswordOtp(otp);
+    } catch (error) {
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+    }
+
+    if (resetTokenDoc.userId !== user.id) {
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid OTP');
+    }
+
+    await userService.updateUserById(user.id, { password });
+    await prisma.token.delete({ where: { id: resetTokenDoc.id } });
+};
+
 /**
  * Logout: delete the refresh token from DB
  * @param {string} refreshToken
@@ -57,4 +78,5 @@ module.exports = {
     loginUserWithEmailandPassword,
     logout,
     refreshAuth,
+    resetPassword,
 };

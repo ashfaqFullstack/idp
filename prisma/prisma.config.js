@@ -1,12 +1,12 @@
-import { defineConfig } from 'prisma/config';
-import 'dotenv/config';
+const { defineConfig } = require('prisma/config');
+require('dotenv').config();
 
-export default defineConfig({
+module.exports = defineConfig({
     earlyAccess: true,
     schema: './prisma/schema.prisma',
     migrate: {
-        async adapter() {
-            const { PrismaPg } = await import('@prisma/adapter-pg');
+        adapter: async () => {
+            const { PrismaPg } = require('@prisma/adapter-pg');
             return new PrismaPg({ connectionString: process.env.DATABASE_URL });
         },
     },

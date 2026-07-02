@@ -92,6 +92,6 @@ const saveStepThree = {
 module.exports = {
     startApplication,
     saveStepOne,
-    saveStepThree, // ← add this
+    saveStepThree,
     getApplication,
 };

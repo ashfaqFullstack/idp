@@ -18,6 +18,32 @@ const startOrResumeApplication = async (userId) => {
         return existingDraft;
     }
 
+  
+    const pendingPayment = await prisma.application.findFirst({
+        where: { userId, status: 'PENDING_PAYMENT' },
+        orderBy: { createdAt: 'desc' },
+    });
+
+    if (pendingPayment) {
+        return pendingPayment;
+    }
+
+    // Payment already completed on a previous application — block a new one.
+    const alreadySubmitted = await prisma.application.findFirst({
+        where: {
+            userId,
+            status: { in: ['PAID', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'ISSUED', 'SHIPPED', 'COMPLETED'] },
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+
+    if (alreadySubmitted) {
+        throw new ApiError(
+            httpStatus.BAD_REQUEST,
+            'You already have a submitted application. Please contact support if you need to make changes.'
+        );
+    }
+
     return prisma.application.create({
         data: {
             userId,
@@ -26,7 +52,6 @@ const startOrResumeApplication = async (userId) => {
         },
     });
 };
-
 /**
  * Get an application by id, scoped to the owning user
  * @param {string} applicationId
@@ -175,5 +200,5 @@ module.exports = {
     assertEditable,
     assertDocumentsComplete,
     saveStepOne,
-    saveStepThree, // ← add this
+    saveStepThree,
 };
