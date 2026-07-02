@@ -3,8 +3,12 @@ const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const logger = require('./logger');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
+    max: 1, // Vercel serverless — keep pool size at 1
 });
 
 const adapter = new PrismaPg(pool);
@@ -14,13 +18,11 @@ const prisma = new PrismaClient({
     log: [
         { emit: 'event', level: 'error' },
         { emit: 'event', level: 'warn' },
-        // { emit: 'event', level: 'query' },
+        ...(isProduction ? [] : [{ emit: 'event', level: 'query' }]),
     ],
 });
 
-// logger for query to log on development 
-
-// if (process.env.NODE_ENV === 'development') {
+// if (!isProduction) {
 //     prisma.$on('query', (e) => {
 //         logger.debug(`Query: ${e.query} | Duration: ${e.duration}ms`);
 //     });
